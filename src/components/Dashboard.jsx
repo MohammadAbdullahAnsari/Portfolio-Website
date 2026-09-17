@@ -4,8 +4,8 @@ import GitHubDashboard from "./GitHubDashboard";
 function Dashboard() {
   return (
     <section
-  id="dashboard"
-  className="min-h-screen bg-[#070b17] text-white px-5 md:px-8 py-20"
+    id="dashboard"
+    className="min-h-screen w-full max-w-full overflow-hidden bg-[#070b17] text-white px-5 md:px-8 py-20"
 >
       <div className="max-w-[1500px] mx-auto">
 

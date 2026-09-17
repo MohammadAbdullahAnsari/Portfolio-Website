@@ -61,7 +61,8 @@ useEffect(() => {
         >
             <nav className=" fixed top-0 left-0 w-full z-50 bg-[#070b17]/85 backdrop-blur-lg border-b border-purple-500/20">
 
-                <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+                <div className="w-full px-6 py-5 flex items-center justify-between">
+                    
 
                     {/* Logo */}
                     <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500">
