@@ -5,6 +5,7 @@ import Projects from "./components/Projects";
 import Footer from "./components/Footer";
 import './App.css'
 import Dashboard from "./components/Dashboard";
+import Contact from "./components/Contact";
 function App() {
 
 
@@ -18,9 +19,9 @@ function App() {
       <Projects />
   
 
-      {/* <Contact/> */}
+      
       <Dashboard />
-    
+    <Contact/>
 
 <Footer />
     </>
