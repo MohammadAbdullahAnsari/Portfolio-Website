@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     FaCode,
     FaCircle,
@@ -118,6 +118,7 @@ function LeetCodeDashboard() {
     const [langs, setLangs] = useState([]);
     const [calendar, setCalendar] = useState(null); // { "YYYY-MM-DD": count }
     const [error, setError] = useState(false);
+    const heatRef = useRef(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -185,8 +186,8 @@ function LeetCodeDashboard() {
     }, [langs]);
 
     // Last 365 days, grouped into Sunday-first week columns
-    const { weeks, monthLabels, totalSubs } = useMemo(() => {
-        if (!calendar) return { weeks: [], monthLabels: [], totalSubs: 0 };
+    const { weeks, monthLabels, totalSubs, activeDays } = useMemo(() => {
+        if (!calendar) return { weeks: [], monthLabels: [], totalSubs: 0, activeDays: 0 };
 
         const today = new Date();
         const end = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
@@ -233,8 +234,15 @@ function LeetCodeDashboard() {
             weeks: w,
             monthLabels: labels,
             totalSubs: days.reduce((s, d) => s + d.count, 0),
+            activeDays: days.filter((d) => d.count > 0).length,
         };
     }, [calendar]);
+
+    // On phones the heatmap scrolls sideways: start at the most recent weeks
+    useEffect(() => {
+        const el = heatRef.current;
+        if (el) el.scrollLeft = el.scrollWidth;
+    }, [weeks.length]);
 
     // Contest badge (Knight / Guardian) if the user has earned one
     const contestBadge = badges.find((b) =>
@@ -243,17 +251,17 @@ function LeetCodeDashboard() {
     const attended = contest?.contestAttend > 0;
 
     return (
-        <div id="leetcode" className="w-full px-4 py-10">
-            <div className="max-w-4xl mx-auto rounded-3xl border border-purple-500/25 bg-gradient-to-b from-[#12112b] to-[#0a0d1c] p-5 md:p-8 shadow-[0_0_60px_rgba(124,58,237,0.12)] text-white">
+        <div id="leetcode" className="w-full max-w-full min-w-0 px-3 sm:px-4 py-10 overflow-x-hidden">
+            <div className="w-full min-w-0 max-w-4xl mx-auto rounded-3xl border border-purple-500/25 bg-gradient-to-b from-[#12112b] to-[#0a0d1c] p-4 sm:p-6 md:p-8 shadow-[0_0_60px_rgba(124,58,237,0.12)] text-white">
 
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
 
                     <div className="flex items-center gap-4">
-                        <SiLeetcode className="text-6xl" style={{ color: "#f8fafc" }} />
+                        <SiLeetcode className="text-5xl sm:text-6xl" style={{ color: "#f8fafc" }} />
                         <div>
-                            <p className="text-3xl font-bold leading-tight">LeetCode</p>
-                            <p className="text-3xl font-bold leading-tight text-orange-400">
+                            <p className="text-2xl sm:text-3xl font-bold leading-tight">LeetCode</p>
+                            <p className="text-2xl sm:text-3xl font-bold leading-tight text-orange-400">
                                 Dashboard
                             </p>
                             <p className="text-gray-400 text-sm mt-1">
@@ -284,69 +292,73 @@ function LeetCodeDashboard() {
                     </p>
                 )}
 
-                {/* Solved Statistics */}
-                <div className={`${cardClass} mt-8 p-5 md:p-6`}>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-6">
+                {/* Solved Statistics: Total on top for phones, then Easy/Medium/Hard in a row */}
+                <div className={`${cardClass} mt-8 p-4 sm:p-5 md:p-6`}>
+                    <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr_1fr_1fr] gap-5 lg:gap-0">
 
                         <div className="flex items-center gap-4 lg:pr-6">
-                            <div className="w-16 h-16 shrink-0 rounded-xl bg-green-500/10 border border-green-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.15)]">
-                                <FaCode className="text-3xl text-green-400" />
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl bg-green-500/10 border border-green-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.15)]">
+                                <FaCode className="text-2xl sm:text-3xl text-green-400" />
                             </div>
                             <div>
                                 <p className="text-gray-300 text-sm">Total Solved</p>
-                                <p className="text-4xl font-bold text-green-400 leading-tight">
+                                <p className="text-3xl sm:text-4xl font-bold text-green-400 leading-tight">
                                     {fmt(total)}
                                 </p>
                                 <p className="text-gray-400 text-sm">Problems</p>
                             </div>
                         </div>
 
-                        <div className="lg:border-l lg:border-white/10 lg:pl-6">
-                            <p className="flex items-center gap-2 text-gray-300 text-sm">
-                                <FaCircle className="text-green-400 text-[10px]" />
-                                Easy
-                            </p>
-                            <p className="text-4xl font-bold text-cyan-200 mt-1">
-                                {fmt(solved?.easySolved)}
-                            </p>
-                            <p className="text-gray-300 mt-1">{pct(solved?.easySolved)}</p>
-                        </div>
+                        {/* On lg these three become direct grid columns (lg:contents) */}
+                        <div className="grid grid-cols-3 border-t border-white/10 pt-5 lg:pt-0 lg:border-t-0 lg:contents">
 
-                        <div className="lg:border-l lg:border-white/10 lg:pl-6">
-                            <p className="flex items-center gap-2 text-gray-300 text-sm">
-                                <FaCircle className="text-orange-400 text-[10px]" />
-                                Medium
-                            </p>
-                            <p className="text-4xl font-bold text-orange-400 mt-1">
-                                {fmt(solved?.mediumSolved)}
-                            </p>
-                            <p className="text-gray-300 mt-1">{pct(solved?.mediumSolved)}</p>
-                        </div>
+                            <div className="lg:border-l lg:border-white/10 lg:pl-6">
+                                <p className="flex items-center gap-1.5 sm:gap-2 text-gray-300 text-xs sm:text-sm">
+                                    <FaCircle className="text-green-400 text-[10px]" />
+                                    Easy
+                                </p>
+                                <p className="text-2xl sm:text-4xl font-bold text-cyan-200 mt-1">
+                                    {fmt(solved?.easySolved)}
+                                </p>
+                                <p className="text-gray-300 text-sm mt-1">{pct(solved?.easySolved)}</p>
+                            </div>
 
-                        <div className="lg:border-l lg:border-white/10 lg:pl-6">
-                            <p className="flex items-center gap-2 text-gray-300 text-sm">
-                                <FaCircle className="text-red-400 text-[10px]" />
-                                Hard
-                            </p>
-                            <p className="text-4xl font-bold text-red-400 mt-1">
-                                {fmt(solved?.hardSolved)}
-                            </p>
-                            <p className="text-gray-300 mt-1">{pct(solved?.hardSolved)}</p>
-                        </div>
+                            <div className="border-l border-white/10 pl-3 sm:pl-6">
+                                <p className="flex items-center gap-1.5 sm:gap-2 text-gray-300 text-xs sm:text-sm">
+                                    <FaCircle className="text-orange-400 text-[10px]" />
+                                    Medium
+                                </p>
+                                <p className="text-2xl sm:text-4xl font-bold text-orange-400 mt-1">
+                                    {fmt(solved?.mediumSolved)}
+                                </p>
+                                <p className="text-gray-300 text-sm mt-1">{pct(solved?.mediumSolved)}</p>
+                            </div>
 
+                            <div className="border-l border-white/10 pl-3 sm:pl-6">
+                                <p className="flex items-center gap-1.5 sm:gap-2 text-gray-300 text-xs sm:text-sm">
+                                    <FaCircle className="text-red-400 text-[10px]" />
+                                    Hard
+                                </p>
+                                <p className="text-2xl sm:text-4xl font-bold text-red-400 mt-1">
+                                    {fmt(solved?.hardSolved)}
+                                </p>
+                                <p className="text-gray-300 text-sm mt-1">{pct(solved?.hardSolved)}</p>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
 
                 {/* Rating & Rank */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
 
-                    <div className={`${cardClass} p-5 flex items-center gap-5`}>
-                        <div className="w-20 h-20 shrink-0 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
+                    <div className={`${cardClass} p-4 sm:p-5 flex items-center gap-4 sm:gap-5`}>
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
                             <FaTrophy className="text-4xl text-purple-400" />
                         </div>
                         <div>
                             <p className="text-gray-300 text-sm">Contest Rating</p>
-                            <p className="text-4xl font-bold text-purple-400 leading-tight">
+                            <p className="text-3xl sm:text-4xl font-bold text-purple-400 leading-tight">
                                 {attended ? fmt(Math.round(contest.contestRating)) : "—"}
                             </p>
                             <p className="text-gray-300 text-sm mt-1">
@@ -359,7 +371,7 @@ function LeetCodeDashboard() {
                         </div>
                     </div>
 
-                    <div className={`${cardClass} p-5 flex items-center gap-5`}>
+                    <div className={`${cardClass} p-4 sm:p-5 flex items-center gap-4 sm:gap-5`}>
                         <Hex size={80} from="#c084fc" to="#6d28d9">
                             {contestBadge?.icon ? (
                                 <img
@@ -391,10 +403,10 @@ function LeetCodeDashboard() {
                 </div>
 
                 {/* Languages & Badges */}
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr] gap-5 mt-5">
+                <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5 mt-5">
 
                     {/* Top Languages */}
-                    <div className={`${cardClass} p-5`}>
+                    <div className={`${cardClass} p-4 sm:p-5 min-w-0`}>
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center">
                                 <FaCode className="text-purple-300" />
@@ -409,18 +421,22 @@ function LeetCodeDashboard() {
                             {languages.map((l) => {
                                 const Icon = l.style.icon;
                                 return (
-                                    <div key={l.name} className="flex items-center gap-3">
-                                        <span className="w-8 flex justify-center">
+                                    <div
+                                        key={l.name}
+                                        className="grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2rem_6rem_1fr_3.5rem] items-center gap-x-3 gap-y-2"
+                                    >
+                                        <span className="flex justify-center">
                                             <Icon className={`text-2xl ${l.style.color}`} />
                                         </span>
-                                        <span className="w-24 text-sm truncate">{l.name}</span>
-                                        <div className="flex-1 h-2 rounded-full bg-[#171b30]">
+                                        <span className="text-sm truncate">{l.name}</span>
+                                        {/* bar drops under the name on phones */}
+                                        <div className="col-span-3 order-last sm:order-none sm:col-span-1 h-2 rounded-full bg-[#171b30]">
                                             <div
                                                 className={`h-2 rounded-full ${l.style.bar}`}
                                                 style={{ width: `${l.width}%` }}
                                             />
                                         </div>
-                                        <span className="w-14 text-right text-sm text-gray-300">
+                                        <span className="text-right text-sm text-gray-300">
                                             {l.value.toFixed(1)}%
                                         </span>
                                     </div>
@@ -430,7 +446,7 @@ function LeetCodeDashboard() {
                     </div>
 
                     {/* Badges */}
-                    <div className={`${cardClass} p-5`}>
+                    <div className={`${cardClass} p-4 sm:p-5 min-w-0`}>
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-300">
                                 <FaMedal />
@@ -445,7 +461,7 @@ function LeetCodeDashboard() {
                                 No badges earned yet.
                             </p>
                         ) : (
-                            <div className="grid grid-cols-4 gap-2 mt-5">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-2 mt-5">
                                 {badges.slice(0, 4).map((b, i) => {
                                     const [from, to] = BADGE_COLORS[i % BADGE_COLORS.length];
                                     const date = b.creationDate
@@ -489,7 +505,7 @@ function LeetCodeDashboard() {
                 {/* Submission Activity */}
                 <div className={`${cardClass} p-5 mt-5`}>
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex items-start gap-3">
                             <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center">
                                 <FaCalendarAlt className="text-purple-300" />
@@ -502,12 +518,28 @@ function LeetCodeDashboard() {
                             </div>
                         </div>
 
-                        <p className="text-purple-400 font-semibold text-right">
+                        <p className="text-purple-400 font-semibold sm:text-right">
                             {calendar ? `${fmt(totalSubs)} submissions` : "365 Days"}
                         </p>
                     </div>
 
-                    <div className="mt-5 overflow-x-auto">
+                    {/* Phones: compact summary instead of the heatmap */}
+                    <div className="md:hidden mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-[#111827] border border-purple-500/15 p-3">
+                            <p className="text-gray-400 text-xs">Submissions</p>
+                            <p className="text-2xl font-bold text-purple-400 mt-1">
+                                {calendar ? fmt(totalSubs) : "—"}
+                            </p>
+                        </div>
+                        <div className="rounded-xl bg-[#111827] border border-purple-500/15 p-3">
+                            <p className="text-gray-400 text-xs">Active days</p>
+                            <p className="text-2xl font-bold text-purple-400 mt-1">
+                                {calendar ? fmt(activeDays) : "—"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div ref={heatRef} className="hidden md:block mt-5 overflow-x-auto pb-1">
                         {weeks.length === 0 ? (
                             <p className="text-gray-500 text-sm py-10 text-center">
                                 Loading activity…

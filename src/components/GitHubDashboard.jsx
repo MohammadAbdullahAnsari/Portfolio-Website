@@ -273,8 +273,8 @@ function GitHubDashboard() {
     const streak = days.length ? longestStreak(days) : null;
 
     return (
-        <div id="github" className="w-full px-4 py-10">
-            <div className="max-w-4xl mx-auto rounded-3xl border border-white/10 bg-gradient-to-b from-[#0c1122] to-[#080b16] p-5 md:p-8 shadow-[0_0_60px_rgba(59,130,246,0.08)] text-white">
+        <div id="github" className="w-full max-w-full min-w-0 px-3 sm:px-4 py-10 overflow-x-hidden">
+            <div className="w-full min-w-0 max-w-4xl mx-auto rounded-3xl border border-white/10 bg-gradient-to-b from-[#0c1122] to-[#080b16] p-4 sm:p-6 md:p-8 shadow-[0_0_60px_rgba(59,130,246,0.08)] text-white">
 
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
@@ -363,7 +363,21 @@ function GitHubDashboard() {
                         <p className="text-purple-400 font-semibold">365 Days</p>
                     </div>
 
-                    <div className="mt-5 overflow-x-auto">
+                    {/* Phones: compact summary instead of the 680px-wide heatmap */}
+                    <div className="md:hidden mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-[#111827] border border-white/10 p-3">
+                            <p className="text-gray-400 text-xs">Contributions</p>
+                            <p className="text-2xl font-bold text-green-400 mt-1">{fmt(totalContribs)}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#111827] border border-white/10 p-3">
+                            <p className="text-gray-400 text-xs">Longest streak</p>
+                            <p className="text-2xl font-bold text-orange-400 mt-1">
+                                {streak === null ? "—" : `${streak} days`}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:block mt-5 overflow-x-auto">
                         {weeks.length === 0 ? (
                             <p className="text-gray-500 text-sm py-10 text-center">
                                 Loading activity…
