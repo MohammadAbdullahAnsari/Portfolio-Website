@@ -22,8 +22,10 @@ const NAV = [
     { id: "home", label: "Home", icon: FaHome },
     { id: "about", label: "About", icon: FaUser },
     { id: "projects", label: "Projects", icon: FaCode },
-    { id: "leetcode", label: "LeetCode", icon: SiLeetcode },
-    { id: "github", label: "GitHub", icon: FaGithub },
+    
+    { id: "dashboard", label: "Dashboard", icon: FaCode },
+
+    
     { id: "contact", label: "Contact", icon: FaEnvelope },
 ];
 

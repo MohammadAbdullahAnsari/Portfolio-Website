@@ -13,9 +13,9 @@ const FILTERS = ["All", "Web Apps", "React", "Full Stack", "Other"];
 //   2. your own screenshot below (put files in /public/projects and list them here)
 //   3. a purple placeholder
 const projectImages = {
-    "DSA-Problems": "/projects/DsaProblems.png",
-    "File-Fusion": "/projects/Filefusion.png",
-    "Portfolio-Website": "/projects/portfolio-website.png",
+    "DSA-Problems": "/projects/DsaProblems.webp",
+    "File-Fusion": "/projects/Filefusion.webp",
+    "Portfolio-Website": "/projects/portfolio.webp",
 };
 
 // Optional per-repo overrides: category + tech chips (+ demo / description)
@@ -29,39 +29,64 @@ const HANDWRITING = { fontFamily: "'Caveat', 'Comic Sans MS', cursive" };
 
 /* ---------- helpers ---------- */
 
-const CACHE_HOURS = 6;
+const CACHE_HIT_HOURS = 6;     // remember a found image for 6 hours
+const CACHE_MISS_MINUTES = 10; // remember "no custom image" only briefly, so a fresh upload shows up soon
 
-// GitHub's REST API doesn't expose the social preview, so we read the repo
-// page's og:image through Microlink (free, CORS-enabled). Custom uploads are
-// served from repository-images.githubusercontent.com; the auto-generated
-// default card (opengraph.githubassets.com) is ignored on purpose.
+// Where does the image come from?
+// 1) our own /api/social-preview function (Vercel) - reliable, reads the repo page on GitHub
+// 2) fallback: Microlink (used on `npm run dev`, where /api doesn't exist)
+// Only images GitHub serves from repository-images.githubusercontent.com (real
+// uploads) are used; the auto-generated card (opengraph.githubassets.com) is ignored.
+const isCustomPreview = (url) =>
+    !!url && url.includes("repository-images.githubusercontent.com");
+
+async function lookupOwnApi(repoName) {
+    const res = await fetch(`/api/social-preview?repo=${encodeURIComponent(repoName)}`);
+    const type = res.headers.get("content-type") || "";
+    if (!res.ok || !type.includes("application/json")) throw new Error("no api");
+    const json = await res.json();
+    return isCustomPreview(json.url) ? json.url : null;
+}
+
+async function lookupMicrolink(repoName) {
+    const page = `https://github.com/${USERNAME}/${repoName}`;
+    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(page)}`);
+    if (!res.ok) throw new Error(String(res.status));
+    const json = await res.json();
+    const found = json?.data?.image?.url || null;
+    return isCustomPreview(found) ? found : null;
+}
+
 async function fetchSocialPreview(repoName) {
     const key = `gh-social:${USERNAME}/${repoName}`;
+
     try {
         const cached = JSON.parse(localStorage.getItem(key) || "null");
-        if (cached && Date.now() - cached.t < CACHE_HOURS * 3600 * 1000) {
-            return cached.url;
+        if (cached) {
+            const ttl = cached.url ? CACHE_HIT_HOURS * 3600e3 : CACHE_MISS_MINUTES * 60e3;
+            if (Date.now() - cached.t < ttl) return cached.url;
         }
     } catch {
         /* ignore storage problems */
     }
 
+    let url;
     try {
-        const page = `https://github.com/${USERNAME}/${repoName}`;
-        const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(page)}`);
-        if (!res.ok) throw new Error(String(res.status));
-        const json = await res.json();
-        const found = json?.data?.image?.url || null;
-        const url = found && found.includes("repository-images.githubusercontent.com") ? found : null;
-        try {
-            localStorage.setItem(key, JSON.stringify({ url, t: Date.now() }));
-        } catch {
-            /* ignore */
-        }
-        return url;
+        url = await lookupOwnApi(repoName);
     } catch {
-        return null; // rate-limited / offline -> fall back to local image
+        try {
+            url = await lookupMicrolink(repoName);
+        } catch {
+            return null; // both failed -> use the local screenshot / placeholder
+        }
     }
+
+    try {
+        localStorage.setItem(key, JSON.stringify({ url, t: Date.now() }));
+    } catch {
+        /* ignore */
+    }
+    return url;
 }
 
 const prettyName = (name) => name.replace(/[-_]+/g, " ");

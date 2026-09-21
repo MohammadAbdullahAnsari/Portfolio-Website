@@ -148,7 +148,7 @@ function Contact() {
 
                                 {/* Character Image (save your character as public/character.png) */}
                                 <img
-                                    src="/contactpic.png"
+                                    src="/contactpic2.png"
                                     alt="Developer character with laptop"
                                     className="w-44 sm:w-52 shrink-0 select-none"
                                     draggable="false"
@@ -157,7 +157,7 @@ function Contact() {
                                 {/* Text */}
                                 <div className="text-center sm:text-left">
                                     <p className="text-purple-400 font-medium tracking-[0.25em] text-xs">
-                                        CONTACT.EXE
+                                        CONTACT
                                     </p>
 
                                     <h3 className="text-4xl md:text-5xl font-bold mt-3">
