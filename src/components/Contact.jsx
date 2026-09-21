@@ -1,13 +1,114 @@
+import { useState } from "react";
 import {
     FaLinkedinIn,
     FaGithub,
     FaEnvelope,
     FaPaperPlane,
     FaDownload,
+    FaCheckCircle,
+    FaExclamationCircle,
 } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 
+/* ---------- contact form settings ---------- */
+
+// Get a free access key at https://web3forms.com (enter your email, the key is
+// sent to your inbox), then put it in .env as VITE_WEB3FORMS_KEY=your_key
+const ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_KEY;
+
+const EMPTY = { name: "", email: "", message: "" };
+
+function validate(values) {
+    const errors = {};
+    if (values.name.trim().length < 2) errors.name = "Please enter your name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(values.email.trim()))
+        errors.email = "Please enter a valid email address.";
+    if (values.message.trim().length < 10)
+        errors.message = "Your message should be at least 10 characters.";
+    return errors;
+}
+
+const inputClass = (hasError) =>
+    `w-full px-5 py-4 rounded-xl bg-[#111827] border text-white placeholder-gray-600 outline-none focus:ring-1 transition ${
+        hasError
+            ? "border-red-500/60 focus:border-red-500 focus:ring-red-500"
+            : "border-purple-500/20 focus:border-purple-500 focus:ring-purple-500"
+    }`;
+
 function Contact() {
+    const [values, setValues] = useState(EMPTY);
+    const [errors, setErrors] = useState({});
+    const [status, setStatus] = useState("idle"); // idle | sending | success | error
+    const [feedback, setFeedback] = useState("");
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setValues((v) => ({ ...v, [name]: value }));
+        if (errors[name]) setErrors((er) => ({ ...er, [name]: undefined }));
+        if (status !== "idle" && status !== "sending") setStatus("idle");
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (status === "sending") return;
+
+        const found = validate(values);
+        setErrors(found);
+        if (Object.keys(found).length) return;
+
+        // hidden honeypot: real people never tick it, bots often do
+        if (e.currentTarget.elements.botcheck?.checked) {
+            setValues(EMPTY);
+            setStatus("success");
+            setFeedback("Thanks! Your message has been sent.");
+            return;
+        }
+
+        if (!ACCESS_KEY) {
+            console.warn("Missing VITE_WEB3FORMS_KEY: contact form is not configured.");
+            setStatus("error");
+            setFeedback(
+                "The contact form isn't set up yet. Please email me directly instead."
+            );
+            return;
+        }
+
+        setStatus("sending");
+        setFeedback("");
+
+        try {
+            const res = await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    access_key: ACCESS_KEY,
+                    subject: `New portfolio message from ${values.name.trim()}`,
+                    from_name: "Portfolio Contact Form",
+                    name: values.name.trim(),
+                    email: values.email.trim(),
+                    message: values.message.trim(),
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                setValues(EMPTY);
+                setStatus("success");
+                setFeedback("Thanks! Your message has been sent. I'll get back to you soon.");
+            } else {
+                setStatus("error");
+                setFeedback(data.message || "Something went wrong. Please try again.");
+            }
+        } catch {
+            // network problem: keep what the visitor typed
+            setStatus("error");
+            setFeedback("Couldn't send your message. Check your connection and try again.");
+        }
+    };
+
     return (
         <section
             id="contact"
@@ -173,51 +274,119 @@ function Contact() {
 
                         </div>
 
-                        {/* RIGHT SIDE - FORM (unchanged) */}
+                        {/* RIGHT SIDE - FORM */}
                         <div className="md:border-l md:border-purple-500/20 md:pl-16">
 
-                            <form className="space-y-5">
+                            <form className="space-y-5" onSubmit={handleSubmit} noValidate>
 
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">
+                                    <label htmlFor="contact-name" className="block text-sm text-gray-400 mb-2">
                                         Your Name
                                     </label>
                                     <input
+                                        id="contact-name"
+                                        name="name"
                                         type="text"
+                                        autoComplete="name"
                                         placeholder="Enter your name"
-                                        className="w-full px-5 py-4 rounded-xl bg-[#111827] border border-purple-500/20 text-white placeholder-gray-600 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                                        value={values.name}
+                                        onChange={handleChange}
+                                        disabled={status === "sending"}
+                                        aria-invalid={!!errors.name}
+                                        aria-describedby={errors.name ? "err-name" : undefined}
+                                        className={inputClass(errors.name)}
                                     />
+                                    {errors.name && (
+                                        <p id="err-name" className="text-red-400 text-sm mt-2">{errors.name}</p>
+                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">
+                                    <label htmlFor="contact-email" className="block text-sm text-gray-400 mb-2">
                                         Your Email
                                     </label>
                                     <input
+                                        id="contact-email"
+                                        name="email"
                                         type="email"
+                                        autoComplete="email"
                                         placeholder="Enter your email"
-                                        className="w-full px-5 py-4 rounded-xl bg-[#111827] border border-purple-500/20 text-white placeholder-gray-600 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                                        value={values.email}
+                                        onChange={handleChange}
+                                        disabled={status === "sending"}
+                                        aria-invalid={!!errors.email}
+                                        aria-describedby={errors.email ? "err-email" : undefined}
+                                        className={inputClass(errors.email)}
                                     />
+                                    {errors.email && (
+                                        <p id="err-email" className="text-red-400 text-sm mt-2">{errors.email}</p>
+                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-2">
+                                    <label htmlFor="contact-message" className="block text-sm text-gray-400 mb-2">
                                         Your Message
                                     </label>
                                     <textarea
+                                        id="contact-message"
+                                        name="message"
                                         rows="6"
                                         placeholder="Write your message..."
-                                        className="w-full px-5 py-4 rounded-xl bg-[#111827] border border-purple-500/20 text-white placeholder-gray-600 outline-none resize-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition"
+                                        value={values.message}
+                                        onChange={handleChange}
+                                        disabled={status === "sending"}
+                                        aria-invalid={!!errors.message}
+                                        aria-describedby={errors.message ? "err-message" : undefined}
+                                        className={`${inputClass(errors.message)} resize-none`}
                                     ></textarea>
+                                    {errors.message && (
+                                        <p id="err-message" className="text-red-400 text-sm mt-2">{errors.message}</p>
+                                    )}
                                 </div>
+
+                                {/* spam trap: hidden from people, bots fill it in */}
+                                <input
+                                    type="checkbox"
+                                    name="botcheck"
+                                    tabIndex={-1}
+                                    autoComplete="off"
+                                    className="hidden"
+                                    style={{ display: "none" }}
+                                />
 
                                 <button
                                     type="submit"
-                                    className="w-full md:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:scale-105 transition font-semibold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(139,92,246,0.25)]"
+                                    disabled={status === "sending"}
+                                    className="w-full md:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:scale-105 transition font-semibold flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(139,92,246,0.25)] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 >
-                                    <FaPaperPlane />
-                                    Send Message
+                                    {status === "sending" ? (
+                                        <>
+                                            <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                                            Sending...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaPaperPlane />
+                                            Send Message
+                                        </>
+                                    )}
                                 </button>
+
+                                {/* result message */}
+                                <div role="status" aria-live="polite">
+                                    {status === "success" && (
+                                        <p className="flex items-start gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-300 text-sm">
+                                            <FaCheckCircle className="mt-0.5 shrink-0 text-lg" />
+                                            {feedback}
+                                        </p>
+                                    )}
+                                    {status === "error" && (
+                                        <p className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+                                            <FaExclamationCircle className="mt-0.5 shrink-0 text-lg" />
+                                            {feedback}
+                                        </p>
+                                    )}
+                                </div>
 
                             </form>
 
