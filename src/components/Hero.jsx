@@ -20,7 +20,7 @@ import { SiLeetcode } from "react-icons/si";
 // id = the id of the section on your page (the nav scrolls to / highlights it)
 const NAV = [
     { id: "home", label: "Home", icon: FaHome },
-    { id: "about", label: "About", icon: FaUser },
+    { id: "skills", label: "Skills", icon: FaUser },
     { id: "projects", label: "Projects", icon: FaCode },
     
     { id: "dashboard", label: "Dashboard", icon: FaCode },

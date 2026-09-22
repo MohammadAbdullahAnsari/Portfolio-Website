@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import Hero from './components/Hero'
-import About from "./components/About";
 import Projects from "./components/Projects";
 import Footer from "./components/Footer";
 import './App.css'
 import Dashboard from "./components/Dashboard";
 import Contact from "./components/Contact";
+import Skills from './components/Skills';
 function App() {
 
 
@@ -13,10 +13,11 @@ function App() {
     <>
       <Hero />
   
-      <About />
      
 
+      <Skills />
       <Projects />
+
   
 
       
